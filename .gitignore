@@ -47,6 +47,10 @@ n8n-workflows/config.env
 # Runtime settings (user-specific)
 settings.json
 prompt/custom.md
+mcp_servers.json
+
+# Database files
+*.db
 
 # Models (large files - download separately)
 *.onnx

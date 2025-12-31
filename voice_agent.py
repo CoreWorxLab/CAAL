@@ -42,7 +42,7 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_script_dir, ".env"))
 
 from livekit import agents
-from livekit.agents import AgentSession, Agent, RoomInputOptions
+from livekit.agents import AgentSession, Agent, RoomInputOptions, mcp
 from livekit.plugins import silero, openai
 
 from caal import OllamaLLM
@@ -120,12 +120,12 @@ ToolStatusCallback = callable  # async (bool, list[str], list[dict]) -> None
 
 
 class VoiceAssistant(WebSearchTools, Agent):
-    """Voice assistant with n8n workflow tools and web search."""
+    """Voice assistant with MCP tools and web search."""
 
     def __init__(
         self,
         ollama_llm: OllamaLLM,
-        n8n_mcp=None,
+        mcp_servers: dict[str, mcp.MCPServerHTTP] | None = None,
         n8n_workflow_tools: list[dict] | None = None,
         n8n_workflow_name_map: dict[str, str] | None = None,
         n8n_base_url: str | None = None,
@@ -138,8 +138,11 @@ class VoiceAssistant(WebSearchTools, Agent):
             llm=ollama_llm,  # Satisfies LLM interface requirement
         )
 
-        # n8n MCP server for workflow discovery
-        self._n8n_mcp = n8n_mcp
+        # All MCP servers (for multi-MCP support)
+        # Named _caal_mcp_servers to avoid conflict with LiveKit's internal _mcp_servers handling
+        self._caal_mcp_servers = mcp_servers or {}
+
+        # n8n-specific for workflow execution (n8n uses webhook-based execution)
         self._n8n_workflow_tools = n8n_workflow_tools or []
         self._n8n_workflow_name_map = n8n_workflow_name_map or {}
         self._n8n_base_url = n8n_base_url
@@ -190,17 +193,15 @@ async def entrypoint(ctx: agents.JobContext) -> None:
     except Exception as e:
         logger.warning(f"Failed to load MCP config: {e}")
 
-    # Get n8n MCP server
-    n8n_mcp = mcp_servers.get("n8n-workflows")
-
-    # Discover n8n workflows
+    # Discover n8n workflows (n8n uses webhook-based execution, not MCP tools)
     n8n_workflow_tools = []
     n8n_workflow_name_map = {}
     n8n_base_url = None
+    n8n_mcp = mcp_servers.get("n8n")
     if n8n_mcp:
         try:
             # Extract base URL from n8n MCP server config
-            n8n_config = next((c for c in mcp_configs if c.name == "n8n-workflows"), None)
+            n8n_config = next((c for c in mcp_configs if c.name == "n8n"), None)
             if n8n_config:
                 # URL format: http://HOST:PORT/mcp-server/http
                 # Base URL: http://HOST:PORT
@@ -298,10 +299,10 @@ async def entrypoint(ctx: agents.JobContext) -> None:
 
     # ==========================================================================
 
-    # Create agent with OllamaLLM
+    # Create agent with OllamaLLM and all MCP servers
     assistant = VoiceAssistant(
         ollama_llm=ollama_llm,
-        n8n_mcp=n8n_mcp,
+        mcp_servers=mcp_servers,
         n8n_workflow_tools=n8n_workflow_tools,
         n8n_workflow_name_map=n8n_workflow_name_map,
         n8n_base_url=n8n_base_url,

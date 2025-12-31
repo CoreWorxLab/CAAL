@@ -80,6 +80,7 @@ services:
       - caal-memory:/app/data
       - ./settings.json:/app/settings.json  # Runtime settings (created on first save)
       - ./prompt:/app/prompt  # Prompt files (custom.md is gitignored)
+      - ./mcp_servers.json:/app/mcp_servers.json  # Additional MCP servers (optional)
     networks:
       - caal-network
     depends_on:

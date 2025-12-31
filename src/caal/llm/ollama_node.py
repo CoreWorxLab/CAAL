@@ -361,12 +361,24 @@ async def _discover_tools(agent) -> list[dict] | None:
                     },
                 })
 
-    # Get MCP tools from Home Assistant
-    if hasattr(agent, "_mcp") and agent._mcp:
-        mcp_tools = await _get_mcp_tools(agent._mcp)
-        ollama_tools.extend(mcp_tools)
+    # Get MCP tools from all configured servers (except n8n)
+    # n8n uses webhook-based workflow discovery, not direct MCP tools
+    if hasattr(agent, "_caal_mcp_servers") and agent._caal_mcp_servers:
+        for server_name, server in agent._caal_mcp_servers.items():
+            # Skip n8n - it uses workflow discovery via _n8n_workflow_tools
+            if server_name == "n8n":
+                continue
 
-    # Add n8n workflow tools
+            mcp_tools = await _get_mcp_tools(server)
+            # Prefix tools with server name to avoid collisions
+            for tool in mcp_tools:
+                original_name = tool["function"]["name"]
+                tool["function"]["name"] = f"{server_name}__{original_name}"
+            ollama_tools.extend(mcp_tools)
+            if mcp_tools:
+                logger.info(f"Added {len(mcp_tools)} tools from MCP server: {server_name}")
+
+    # Add n8n workflow tools (webhook-based execution, separate from MCP)
     if hasattr(agent, "_n8n_workflow_tools") and agent._n8n_workflow_tools:
         ollama_tools.extend(agent._n8n_workflow_tools)
 
@@ -486,7 +498,13 @@ async def _execute_tool_calls(
 
 
 async def _execute_single_tool(agent, tool_name: str, arguments: dict) -> Any:
-    """Execute a single tool call."""
+    """Execute a single tool call.
+
+    Routing priority:
+    1. Agent methods (@function_tool decorated)
+    2. n8n workflows (webhook-based execution)
+    3. MCP servers (with server_name__tool_name prefix parsing)
+    """
 
     # Check if it's an agent method
     if hasattr(agent, tool_name) and callable(getattr(agent, tool_name)):
@@ -508,11 +526,21 @@ async def _execute_single_tool(agent, tool_name: str, arguments: dict) -> Any:
         logger.info(f"n8n workflow {tool_name} completed")
         return result
 
-    # Check MCP servers
-    if hasattr(agent, "_mcp") and agent._mcp:
-        result = await _call_mcp_tool(agent._mcp, tool_name, arguments)
-        if result is not None:
-            return result
+    # Check MCP servers (with multi-server routing)
+    if hasattr(agent, "_caal_mcp_servers") and agent._caal_mcp_servers:
+        # Parse server name from prefixed tool name
+        # Format: server_name__actual_tool (double underscore separator)
+        if "__" in tool_name:
+            server_name, actual_tool = tool_name.split("__", 1)
+        else:
+            # Unprefixed tools default to n8n server
+            server_name, actual_tool = "n8n", tool_name
+
+        if server_name in agent._caal_mcp_servers:
+            server = agent._caal_mcp_servers[server_name]
+            result = await _call_mcp_tool(server, actual_tool, arguments)
+            if result is not None:
+                return result
 
     raise ValueError(f"Tool {tool_name} not found")
 

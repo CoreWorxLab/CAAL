@@ -1,0 +1,12 @@
+{
+  "description": "Additional MCP servers for CAAL (n8n is configured in .env)",
+  "servers": [
+    {
+      "name": "home_assistant",
+      "url": "http://homeassistant.local:8123/api/mcp",
+      "token": "your_long_lived_access_token",
+      "transport": "streamable_http",
+      "timeout": 10.0
+    }
+  ]
+}
