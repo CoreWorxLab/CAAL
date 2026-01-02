@@ -561,6 +561,8 @@ Both use the same `--profile https` and nginx for TLS termination.
 
 2. **Wake Word Models**: The Python `.ppn` models don't work in browser - you need the Web (WASM) version from Picovoice.
 
+3. **RTX 50 Series (Blackwell) Support**: Kokoro TTS requires `v0.2.4-master` or later for RTX 5080/5090 (sm_120) support. This is already configured in `docker-compose.yaml`.
+
 ## Related Projects
 
 - [LiveKit Agents](https://github.com/livekit/agents) - Voice agent framework

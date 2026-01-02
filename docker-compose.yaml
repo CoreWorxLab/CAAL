@@ -122,8 +122,10 @@ services:
   # ===========================================================================
   # Kokoro - TTS (remsky/kokoro-fastapi)
   # ===========================================================================
+  # Using v0.2.4-master for RTX 50 series (Blackwell/sm_120) GPU support
+  # See: https://github.com/remsky/Kokoro-FastAPI/releases/tag/v0.2.4-master
   kokoro:
-    image: ghcr.io/remsky/kokoro-fastapi-gpu:latest
+    image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4-master
     container_name: caal-kokoro
     ports:
       - "${KOKORO_PORT:-8880}:8880"
