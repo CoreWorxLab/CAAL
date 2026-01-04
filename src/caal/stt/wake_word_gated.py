@@ -107,12 +107,16 @@ class WakeWordGatedSTT(STT):
     def _ensure_model(self) -> OWWModel:
         """Lazy-load the OpenWakeWord model."""
         if self._oww is None:
-            logger.info(f"Loading OpenWakeWord model from {self._model_path}")
-            self._oww = OWWModel(
-                wakeword_models=[self._model_path],
-                inference_framework="onnx",  # Use ONNX for .onnx models
-            )
-            logger.info("OpenWakeWord model loaded")
+            try:
+                logger.info(f"Loading OpenWakeWord model from {self._model_path}")
+                self._oww = OWWModel(
+                    wakeword_models=[self._model_path],
+                    inference_framework="onnx",  # Use ONNX for .onnx models
+                )
+                logger.info("OpenWakeWord model loaded")
+            except Exception as e:
+                logger.error(f"Failed to load OpenWakeWord model from {self._model_path}: {e}")
+                raise RuntimeError(f"Wake word model unavailable: {e}") from e
         return self._oww
 
     async def _recognize_impl(

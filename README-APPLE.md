@@ -43,9 +43,27 @@ ollama serve  # Keep running or use: brew services start ollama
 
 ### 2. mlx-audio
 
+mlx-audio requires a dedicated virtual environment with all dependencies for STT (Whisper) and TTS (Kokoro):
+
 ```bash
-pip install "mlx-audio[all]"
+# Create dedicated virtual environment
+python3 -m venv ~/.mlx-audio-venv
+
+# Install mlx-audio with all dependencies
+~/.mlx-audio-venv/bin/pip install --upgrade pip
+~/.mlx-audio-venv/bin/pip install "mlx-audio[tts]"
+
+# Additional dependencies for Whisper STT
+~/.mlx-audio-venv/bin/pip install numba
+
+# Additional dependencies for Kokoro TTS
+~/.mlx-audio-venv/bin/pip install loguru misaki num2words
+
+# Server dependencies
+~/.mlx-audio-venv/bin/pip install soundfile fastapi uvicorn webrtcvad python-multipart
 ```
+
+> **Note:** The `start-apple.sh` script will automatically set up this environment if it doesn't exist.
 
 ### 3. Docker Desktop
 
@@ -172,6 +190,18 @@ curl http://localhost:11434/api/tags
 ```
 
 ### "mlx-audio failed to start"
+
+Check the logs for missing dependencies:
+```bash
+tail -50 /tmp/caal-mlx-audio.log
+```
+
+Common missing dependencies:
+- `ModuleNotFoundError: No module named 'numba'` → `~/.mlx-audio-venv/bin/pip install numba`
+- `ModuleNotFoundError: No module named 'loguru'` → `~/.mlx-audio-venv/bin/pip install loguru`
+- `ModuleNotFoundError: No module named 'soundfile'` → `~/.mlx-audio-venv/bin/pip install soundfile`
+- `Model type kokoro not supported` → `~/.mlx-audio-venv/bin/pip install "mlx-audio[tts]" loguru misaki num2words`
+- `Model type whisper not supported` → `~/.mlx-audio-venv/bin/pip install numba`
 
 Check if port 8001 is already in use:
 ```bash

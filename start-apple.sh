@@ -18,6 +18,8 @@ error() { echo -e "${RED}[CAAL]${NC} $1"; }
 
 MLX_PID_FILE="/tmp/caal-mlx-audio.pid"
 MLX_LOG_FILE="/tmp/caal-mlx-audio.log"
+MLX_VENV="$HOME/.mlx-audio-venv"
+MLX_PYTHON="$MLX_VENV/bin/python"
 
 banner() {
     echo -e "${CYAN}${BOLD}"
@@ -100,6 +102,56 @@ if [ "$1" == "--stop" ]; then
     stop_all
 fi
 
+setup_mlx_audio() {
+    log "Setting up mlx-audio environment..."
+
+    # Create virtual environment if it doesn't exist
+    if [ ! -d "$MLX_VENV" ]; then
+        log "Creating virtual environment at $MLX_VENV..."
+        python3 -m venv "$MLX_VENV"
+    fi
+
+    # Upgrade pip
+    "$MLX_VENV/bin/pip" install --upgrade pip -q
+
+    # Install mlx-audio with TTS support
+    log "Installing mlx-audio (this may take a few minutes on first run)..."
+    "$MLX_VENV/bin/pip" install "mlx-audio[tts]" -q
+
+    # Install additional dependencies for Whisper STT
+    "$MLX_VENV/bin/pip" install numba -q
+
+    # Install additional dependencies for Kokoro TTS
+    "$MLX_VENV/bin/pip" install loguru misaki num2words -q
+
+    # Install server dependencies
+    "$MLX_VENV/bin/pip" install soundfile fastapi uvicorn webrtcvad python-multipart -q
+
+    log "✓ mlx-audio environment ready"
+    echo ""
+
+    # Pre-download models
+    log "Pre-downloading models (first time may take a few minutes)..."
+    echo ""
+
+    log "Downloading Whisper STT model..."
+    "$MLX_PYTHON" -c "
+from huggingface_hub import snapshot_download
+snapshot_download('mlx-community/whisper-medium-mlx', local_files_only=False)
+print('Done')
+" 2>/dev/null || warn "Whisper model will be downloaded on first use"
+
+    log "Downloading Kokoro TTS model..."
+    "$MLX_PYTHON" -c "
+from huggingface_hub import snapshot_download
+snapshot_download('prince-canuma/Kokoro-82M', local_files_only=False)
+print('Done')
+" 2>/dev/null || warn "Kokoro model will be downloaded on first use"
+
+    echo ""
+    log "✓ Models ready"
+}
+
 banner
 log "Starting CAAL..."
 echo ""
@@ -113,6 +165,14 @@ if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
     exit 1
 fi
 echo -e "${GREEN}✓${NC}"
+
+# Check/setup mlx-audio environment
+if [ ! -f "$MLX_PYTHON" ] || ! "$MLX_PYTHON" -c "import mlx_audio" 2>/dev/null; then
+    setup_mlx_audio
+else
+    printf "${GREEN}[CAAL]${NC} Checking mlx-audio... "
+    echo -e "${GREEN}✓${NC}"
+fi
 
 # Check if mlx-audio is already running
 MLX_RUNNING=false
@@ -128,8 +188,8 @@ fi
 if [ "$MLX_RUNNING" = false ]; then
     printf "${GREEN}[CAAL]${NC} Starting mlx-audio server... "
 
-    # Start in background
-    nohup python3 -m mlx_audio.server --host 0.0.0.0 --port 8001 > "$MLX_LOG_FILE" 2>&1 &
+    # Start in background using dedicated venv
+    nohup "$MLX_PYTHON" -m mlx_audio.server --host 0.0.0.0 --port 8001 > "$MLX_LOG_FILE" 2>&1 &
     MLX_PID=$!
     echo $MLX_PID > "$MLX_PID_FILE"
 

@@ -185,6 +185,12 @@ async def entrypoint(ctx: agents.JobContext) -> None:
     global _webhook_server_task
     if _webhook_server_task is None:
         _webhook_server_task = asyncio.create_task(start_webhook_server())
+        # Brief delay to check if server started successfully
+        await asyncio.sleep(0.5)
+        if _webhook_server_task.done():
+            exc = _webhook_server_task.exception()
+            if exc:
+                logger.error(f"Webhook server failed to start: {exc}")
 
     logger.debug(f"Joining room: {ctx.room.name}")
     await ctx.connect()
@@ -195,7 +201,8 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         mcp_configs = load_mcp_config()
         mcp_servers = await initialize_mcp_servers(mcp_configs)
     except Exception as e:
-        logger.warning(f"Failed to load MCP config: {e}")
+        logger.error(f"Failed to load MCP config: {e}")
+        mcp_configs = []  # Ensure mcp_configs is defined for later use
 
     # Discover n8n workflows (n8n uses webhook-based execution, not MCP tools)
     n8n_workflow_tools = []
@@ -216,7 +223,7 @@ async def entrypoint(ctx: agents.JobContext) -> None:
                 n8n_mcp, n8n_base_url
             )
         except Exception as e:
-            logger.warning(f"Failed to discover n8n workflows: {e}")
+            logger.error(f"Failed to discover n8n workflows: {e}")
 
     # Get runtime settings (from settings.json with .env fallback)
     runtime = get_runtime_settings()
@@ -402,16 +409,7 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         max_turns=runtime["max_turns"],
     )
 
-    # Start session
-    await session.start(
-        room=ctx.room,
-        agent=assistant,
-    )
-
-    # Register session for webhook access
-    session_registry.register(ctx.room.name, session, assistant)
-
-    # Create event to wait for session close
+    # Create event to wait for session close (BEFORE session.start to avoid race condition)
     close_event = asyncio.Event()
 
     @session.on("close")
@@ -419,11 +417,27 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         logger.info(f"Session closed: {ev.reason}")
         close_event.set()
 
+    # Register session for webhook access
+    session_registry.register(ctx.room.name, session, assistant)
+
+    # Start session AFTER handlers are registered
+    await session.start(
+        room=ctx.room,
+        agent=assistant,
+    )
+
     try:
-        # Send initial greeting
-        await session.generate_reply(
-            instructions="Greet the user briefly and let them know you're ready to help."
-        )
+        # Send initial greeting with timeout to prevent hanging on unresponsive LLM
+        try:
+            await asyncio.wait_for(
+                session.generate_reply(
+                    instructions="Greet the user briefly and let them know you're ready to help."
+                ),
+                timeout=30.0,
+            )
+        except asyncio.TimeoutError:
+            logger.error("Initial greeting timed out (30s) - LLM may be unresponsive")
+            # Continue anyway - user can still speak
 
         logger.info("Agent ready - listening for speech...")
 
