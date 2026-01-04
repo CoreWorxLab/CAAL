@@ -18,8 +18,22 @@ error() { echo -e "${RED}[CAAL]${NC} $1"; }
 
 MLX_PID_FILE="/tmp/caal-mlx-audio.pid"
 MLX_LOG_FILE="/tmp/caal-mlx-audio.log"
-MLX_VENV="$HOME/.mlx-audio-venv"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MLX_VENV="$SCRIPT_DIR/.mlx-audio-venv"
 MLX_PYTHON="$MLX_VENV/bin/python"
+
+# Load .env file if it exists
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    # shellcheck disable=SC1091
+    source "$SCRIPT_DIR/.env"
+fi
+
+# Set Docker profile based on HTTPS_DOMAIN
+if [ -n "${HTTPS_DOMAIN}" ]; then
+    DOCKER_PROFILE="--profile https"
+else
+    DOCKER_PROFILE=""
+fi
 
 banner() {
     echo -e "${CYAN}${BOLD}"
@@ -34,23 +48,6 @@ EOF
     echo -e "${NC}"
     echo -e "  ${BOLD}Voice Assistant for Apple Silicon${NC}"
     echo ""
-}
-
-# Progress bar function
-# Usage: progress_bar "message" current total
-progress_bar() {
-    local msg="$1"
-    local current="$2"
-    local total="$3"
-    local width=30
-    local percent=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-
-    printf "\r${GREEN}[CAAL]${NC} %s [" "$msg"
-    printf "%${filled}s" | tr ' ' '█'
-    printf "%${empty}s" | tr ' ' '░'
-    printf "] %3d%%" "$percent"
 }
 
 # Load a model with progress feedback
@@ -80,7 +77,7 @@ stop_all() {
 
     # Stop Docker
     log "Stopping Docker containers..."
-    docker compose -f docker-compose.apple.yaml down || true
+    docker compose -f docker-compose.apple.yaml $DOCKER_PROFILE down || true
 
     # Stop mlx-audio
     if [ -f "$MLX_PID_FILE" ]; then
@@ -225,7 +222,7 @@ fi
 
 # Start Docker services
 log "Starting Docker services..."
-docker compose -f docker-compose.apple.yaml up -d
+docker compose -f docker-compose.apple.yaml $DOCKER_PROFILE up -d
 
 # Wait for services
 printf "${GREEN}[CAAL]${NC} Waiting for services"

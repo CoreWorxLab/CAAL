@@ -474,7 +474,7 @@ def preload_models():
     try:
         logger.info(f"  Loading STT: {whisper_model}")
         response = requests.post(
-            f"{speaches_url}/v1/models/{whisper_model}",
+            f"{speaches_url}/v1/models?model_name={whisper_model}",
             timeout=300
         )
         if response.status_code == 200:
