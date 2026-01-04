@@ -102,6 +102,12 @@ fi
 setup_mlx_audio() {
     log "Setting up mlx-audio environment..."
 
+    # Check if venv exists but is corrupted (missing pip - can happen with uv-created venvs)
+    if [ -d "$MLX_VENV" ] && ! "$MLX_VENV/bin/python" -c "import pip" 2>/dev/null; then
+        warn "Virtual environment is corrupted (missing pip). Recreating..."
+        rm -rf "$MLX_VENV"
+    fi
+
     # Create virtual environment if it doesn't exist
     # Use Python 3.11 explicitly for compatibility with mlx-audio dependencies
     if [ ! -d "$MLX_VENV" ]; then
@@ -112,6 +118,12 @@ setup_mlx_audio() {
             warn "Python 3.11 not found, using default python3 (may have compatibility issues)"
             python3 -m venv "$MLX_VENV"
         fi
+    fi
+
+    # Verify pip is available
+    if ! "$MLX_VENV/bin/python" -c "import pip" 2>/dev/null; then
+        error "Failed to create virtual environment with pip. Please check your Python installation."
+        exit 1
     fi
 
     # Upgrade pip
@@ -167,7 +179,10 @@ fi
 echo -e "${GREEN}✓${NC}"
 
 # Check/setup mlx-audio environment
-if [ ! -f "$MLX_PYTHON" ] || ! "$MLX_PYTHON" -c "import mlx_audio" 2>/dev/null; then
+# Verify: python exists, pip is available, and mlx_audio can be imported
+if [ ! -f "$MLX_PYTHON" ] || \
+   ! "$MLX_PYTHON" -c "import pip" 2>/dev/null || \
+   ! "$MLX_PYTHON" -c "import mlx_audio" 2>/dev/null; then
     setup_mlx_audio
 else
     printf "${GREEN}[CAAL]${NC} Checking mlx-audio... "
