@@ -43,27 +43,24 @@ ollama serve  # Keep running or use: brew services start ollama
 
 ### 2. mlx-audio
 
-mlx-audio requires a dedicated virtual environment with all dependencies for STT (Whisper) and TTS (Kokoro):
+> **Recommended:** The easiest way to install mlx-audio with all its dependencies is to use the `start-apple.sh` script. It will automatically create the virtual environment, install all dependencies, and download the required models. Just run `./start-apple.sh` and everything will be set up for you.
+
+If you prefer manual installation, mlx-audio requires a dedicated virtual environment with all dependencies for STT (Whisper) and TTS (Kokoro).
+
+> **Important:** Use Python 3.11 for compatibility. Python 3.12+ may have issues with some dependencies.
 
 ```bash
-# Create dedicated virtual environment
-python3 -m venv ~/.mlx-audio-venv
+# Create dedicated virtual environment (Python 3.11 recommended)
+python3.11 -m venv ~/.mlx-audio-venv
+~/.mlx-audio-venv/bin/pip install --upgrade pip
 
 # Install mlx-audio with all dependencies
-~/.mlx-audio-venv/bin/pip install --upgrade pip
-~/.mlx-audio-venv/bin/pip install "mlx-audio[tts]"
-
-# Additional dependencies for Whisper STT
-~/.mlx-audio-venv/bin/pip install numba
-
-# Additional dependencies for Kokoro TTS
-~/.mlx-audio-venv/bin/pip install loguru misaki num2words
-
-# Server dependencies
-~/.mlx-audio-venv/bin/pip install soundfile fastapi uvicorn webrtcvad python-multipart
+~/.mlx-audio-venv/bin/pip install \
+    mlx-audio \
+    soundfile fastapi uvicorn webrtcvad python-multipart \
+    numba tiktoken scipy tqdm \
+    loguru misaki num2words spacy phonemizer-fork espeakng-loader torch
 ```
-
-> **Note:** The `start-apple.sh` script will automatically set up this environment if it doesn't exist.
 
 ### 3. Docker Desktop
 
@@ -200,7 +197,8 @@ Common missing dependencies:
 - `ModuleNotFoundError: No module named 'numba'` → `~/.mlx-audio-venv/bin/pip install numba`
 - `ModuleNotFoundError: No module named 'loguru'` → `~/.mlx-audio-venv/bin/pip install loguru`
 - `ModuleNotFoundError: No module named 'soundfile'` → `~/.mlx-audio-venv/bin/pip install soundfile`
-- `Model type kokoro not supported` → `~/.mlx-audio-venv/bin/pip install "mlx-audio[tts]" loguru misaki num2words`
+- `ModuleNotFoundError: No module named 'spacy'` → `~/.mlx-audio-venv/bin/pip install spacy phonemizer-fork`
+- `Model type kokoro not supported` → `~/.mlx-audio-venv/bin/pip install loguru misaki num2words spacy phonemizer-fork`
 - `Model type whisper not supported` → `~/.mlx-audio-venv/bin/pip install numba`
 
 Check if port 8001 is already in use:

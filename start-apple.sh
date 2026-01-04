@@ -106,26 +106,29 @@ setup_mlx_audio() {
     log "Setting up mlx-audio environment..."
 
     # Create virtual environment if it doesn't exist
+    # Use Python 3.11 explicitly for compatibility with mlx-audio dependencies
     if [ ! -d "$MLX_VENV" ]; then
         log "Creating virtual environment at $MLX_VENV..."
-        python3 -m venv "$MLX_VENV"
+        if command -v python3.11 &> /dev/null; then
+            python3.11 -m venv "$MLX_VENV"
+        else
+            warn "Python 3.11 not found, using default python3 (may have compatibility issues)"
+            python3 -m venv "$MLX_VENV"
+        fi
     fi
 
     # Upgrade pip
     "$MLX_VENV/bin/pip" install --upgrade pip -q
 
-    # Install mlx-audio with TTS support
-    log "Installing mlx-audio (this may take a few minutes on first run)..."
-    "$MLX_VENV/bin/pip" install "mlx-audio[tts]" -q
+    # Install mlx-audio and all dependencies
+    log "Installing mlx-audio and dependencies (this may take a few minutes)..."
 
-    # Install additional dependencies for Whisper STT
-    "$MLX_VENV/bin/pip" install numba -q
-
-    # Install additional dependencies for Kokoro TTS
-    "$MLX_VENV/bin/pip" install loguru misaki num2words -q
-
-    # Install server dependencies
-    "$MLX_VENV/bin/pip" install soundfile fastapi uvicorn webrtcvad python-multipart -q
+    # Install all mlx-audio dependencies in one command
+    "$MLX_VENV/bin/pip" install -q \
+        mlx-audio \
+        soundfile fastapi uvicorn webrtcvad python-multipart \
+        numba tiktoken scipy tqdm \
+        loguru misaki num2words spacy phonemizer-fork espeakng-loader torch
 
     log "✓ mlx-audio environment ready"
     echo ""
