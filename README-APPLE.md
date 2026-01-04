@@ -238,7 +238,8 @@ OLLAMA_KEEP_ALIVE=24h ollama serve
 
 ### TTS (Text-to-Speech)
 - Default: `prince-canuma/Kokoro-82M`
-- Voice: `am_puck` (configurable in `.env` as `TTS_VOICE`)
+- Voice: `af_heart` (configurable in `.env` as `TTS_VOICE`)
+- Available voices: `af_heart`, `af_bella`, `af_nova`, `af_alloy` (American female), `bf_emma` (British female)
 
 ### LLM
 - Default: `ministral-3:8b` (good tool-calling, low latency)
