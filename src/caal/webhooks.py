@@ -187,10 +187,11 @@ async def reload_tools(req: ReloadToolsRequest) -> ReloadToolsResponse:
 
     # Re-discover n8n workflows if MCP is configured
     tool_count = 0
-    if agent._n8n_mcp and agent._n8n_base_url:
+    n8n_mcp = agent._caal_mcp_servers.get("n8n")
+    if n8n_mcp and agent._n8n_base_url:
         try:
             tools, name_map = await n8n.discover_n8n_workflows(
-                agent._n8n_mcp, agent._n8n_base_url
+                n8n_mcp, agent._n8n_base_url
             )
             agent._n8n_workflow_tools = tools
             agent._n8n_workflow_name_map = name_map
