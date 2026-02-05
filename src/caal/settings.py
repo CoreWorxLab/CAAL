@@ -41,7 +41,7 @@ DEFAULT_SETTINGS = {
     "language": "en",  # ISO 639-1: "en" | "fr" | "it"
     # Provider settings (UI sets both together, but stored separately for power users)
     "stt_provider": "speaches",  # "speaches" | "groq"
-    "llm_provider": "ollama",  # "ollama" | "groq"
+    "llm_provider": "ollama",  # "ollama" | "groq" | "openai"
     "tts_provider": "kokoro",  # "kokoro" | "piper"
     # TTS settings - voice selection (Kokoro uses voice param, Piper bakes voice into model)
     "tts_voice_kokoro": "am_puck",
@@ -54,6 +54,10 @@ DEFAULT_SETTINGS = {
     # Groq settings
     "groq_api_key": "",  # API key from console.groq.com
     "groq_model": "llama-3.3-70b-versatile",
+    # OpenAI-compatible settings (LM Studio, vLLM, LocalAI, FastFlowLM, etc.)
+    "openai_host": "",  # Server URL (e.g., http://localhost:8080/v1)
+    "openai_model": "",  # Model name as recognized by the server
+    "openai_api_key": "",  # Optional - some servers don't require auth
     # Home Assistant integration
     "hass_enabled": False,
     "hass_host": "",
@@ -163,6 +167,14 @@ def _migrate_env_to_settings(settings: dict) -> dict:
         settings["n8n_url"] = n8n_url
     if n8n_token := os.getenv("N8N_MCP_TOKEN"):
         settings["n8n_token"] = n8n_token
+
+    # OpenAI-compatible provider settings
+    if openai_host := os.getenv("OPENAI_COMPAT_HOST"):
+        settings["openai_host"] = openai_host
+    if openai_model := os.getenv("OPENAI_COMPAT_MODEL"):
+        settings["openai_model"] = openai_model
+    if openai_api_key := os.getenv("OPENAI_COMPAT_API_KEY"):
+        settings["openai_api_key"] = openai_api_key
 
     return settings
 

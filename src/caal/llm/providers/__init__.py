@@ -1,12 +1,13 @@
 """LLM provider implementations for CAAL.
 
 This package provides a unified interface for different LLM backends,
-enabling CAAL to work with Ollama, Groq, and potentially other providers
-while sharing common tool orchestration logic.
+enabling CAAL to work with Ollama, Groq, OpenAI-compatible servers,
+and potentially other providers while sharing common tool orchestration logic.
 
 Providers:
     - OllamaProvider: Local Ollama with think parameter support
     - GroqProvider: Groq cloud API
+    - OpenAIProvider: Any OpenAI-compatible endpoint (LM Studio, vLLM, LocalAI, etc.)
 
 Example:
     >>> from caal.llm.providers import create_provider
@@ -16,6 +17,9 @@ Example:
     >>>
     >>> # Create Groq provider
     >>> provider = create_provider("groq", model="llama-3.3-70b-versatile")
+    >>>
+    >>> # Create OpenAI-compatible provider
+    >>> provider = create_provider("openai", model="my-model", base_url="http://localhost:8080/v1")
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from typing import Any
 from .base import LLMProvider, LLMResponse, ToolCall
 from .groq_provider import GroqProvider
 from .ollama_provider import OllamaProvider
+from .openai_provider import OpenAIProvider
 
 __all__ = [
     "LLMProvider",
@@ -34,6 +39,7 @@ __all__ = [
     "ToolCall",
     "OllamaProvider",
     "GroqProvider",
+    "OpenAIProvider",
     "create_provider",
 ]
 
@@ -47,7 +53,7 @@ def create_provider(
     """Factory function to create an LLM provider by name.
 
     Args:
-        provider_name: Provider identifier ("ollama" or "groq")
+        provider_name: Provider identifier ("ollama", "groq", or "openai")
         **kwargs: Provider-specific configuration options
 
     Returns:
@@ -63,6 +69,11 @@ def create_provider(
         ...     think=False,
         ...     temperature=0.7,
         ... )
+        >>> provider = create_provider(
+        ...     "openai",
+        ...     model="my-model",
+        ...     base_url="http://localhost:8080/v1",
+        ... )
     """
     provider_name = provider_name.lower()
 
@@ -70,10 +81,12 @@ def create_provider(
         return OllamaProvider(**kwargs)
     elif provider_name == "groq":
         return GroqProvider(**kwargs)
+    elif provider_name == "openai":
+        return OpenAIProvider(**kwargs)
     else:
         raise ValueError(
             f"Unknown LLM provider: {provider_name}. "
-            f"Supported providers: ollama, groq"
+            f"Supported providers: ollama, groq, openai"
         )
 
 
@@ -85,9 +98,11 @@ def create_provider_from_settings(settings: dict[str, Any]) -> LLMProvider:
 
     Args:
         settings: Runtime settings dict with keys like:
-            - llm_provider: "ollama" or "groq"
-            - model: Ollama model name
+            - llm_provider: "ollama", "groq", or "openai"
+            - ollama_model: Ollama model name
             - groq_model: Groq model name
+            - openai_model: OpenAI-compatible model name
+            - openai_host: OpenAI-compatible server URL
             - temperature: Sampling temperature
             - num_ctx: Context window size (Ollama only)
 
@@ -117,8 +132,18 @@ def create_provider_from_settings(settings: dict[str, Any]) -> LLMProvider:
             api_key=api_key,
             temperature=settings.get("temperature", 0.7),
         )
+    elif provider_name == "openai":
+        # OpenAI-compatible provider for LM Studio, vLLM, LocalAI, etc.
+        base_url = settings.get("openai_host") or os.environ.get("OPENAI_COMPAT_HOST")
+        api_key = settings.get("openai_api_key") or os.environ.get("OPENAI_COMPAT_API_KEY")
+        return OpenAIProvider(
+            model=settings.get("openai_model", "default"),
+            base_url=base_url,
+            api_key=api_key,
+            temperature=settings.get("temperature", 0.7),
+        )
     else:
         raise ValueError(
             f"Unknown LLM provider: {provider_name}. "
-            f"Supported providers: ollama, groq"
+            f"Supported providers: ollama, groq, openai"
         )
