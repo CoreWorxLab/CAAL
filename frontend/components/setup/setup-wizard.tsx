@@ -6,9 +6,12 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/livekit/button';
 import { IntegrationsStep } from './integrations-step';
 import { ProviderStep } from './provider-step';
-import { SttStep } from './stt-step';
+import { SttProviderStep } from './stt-provider-step';
+import { TtsStep } from './tts-step';
 
 export interface SetupData {
+  // STT Provider
+  stt_provider: 'speaches' | 'groq';
   // LLM Provider
   llm_provider: 'ollama' | 'groq' | 'openai_compatible' | 'openrouter';
   ollama_host: string;
@@ -40,6 +43,7 @@ interface SetupWizardProps {
 }
 
 const INITIAL_DATA: SetupData = {
+  stt_provider: 'speaches',
   llm_provider: 'ollama',
   ollama_host: 'http://localhost:11434',
   ollama_model: '',
@@ -61,7 +65,7 @@ const INITIAL_DATA: SetupData = {
   n8n_token: '',
 };
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 // Per-language Piper voice mapping (mirrors PIPER_VOICE_MAP in settings.py)
 const PIPER_MODELS: Record<string, string> = {
@@ -167,7 +171,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
   // Check if current step is valid to proceed
   const canProceed = () => {
+    // Step 1: STT provider - always valid (default is speaches)
     if (step === 1) {
+      return true;
+    }
+    // Step 2: LLM provider
+    if (step === 2) {
       switch (data.llm_provider) {
         case 'ollama':
           return data.ollama_host && data.ollama_model;
@@ -181,13 +190,14 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           return false;
       }
     }
-    // Step 2 (TTS) - both providers valid if voice selected
-    if (step === 2) {
+    // Step 3: TTS - both providers valid if voice selected
+    if (step === 3) {
       if (data.tts_provider === 'piper') {
         return !!data.tts_voice_piper;
       }
       return !!data.tts_voice_kokoro;
     }
+    // Step 4: Integrations - always valid
     return true;
   };
 
@@ -199,6 +209,8 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         return t('step2Title');
       case 3:
         return t('step3Title');
+      case 4:
+        return t('step4Title');
       default:
         return '';
     }
@@ -228,9 +240,10 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         <div className="flex-1 overflow-y-auto p-4">
           {error && <div className="mb-4 rounded-md bg-red-500/10 p-3 text-red-500">{error}</div>}
 
-          {step === 1 && <ProviderStep data={data} updateData={updateData} />}
-          {step === 2 && <SttStep data={data} updateData={updateData} />}
-          {step === 3 && <IntegrationsStep data={data} updateData={updateData} />}
+          {step === 1 && <SttProviderStep data={data} updateData={updateData} />}
+          {step === 2 && <ProviderStep data={data} updateData={updateData} />}
+          {step === 3 && <TtsStep data={data} updateData={updateData} />}
+          {step === 4 && <IntegrationsStep data={data} updateData={updateData} />}
         </div>
 
         {/* Footer */}

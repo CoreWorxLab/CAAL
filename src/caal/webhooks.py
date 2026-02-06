@@ -459,15 +459,6 @@ async def update_settings(req: SettingsUpdateRequest) -> SettingsResponse:
                 continue
             current[key] = value
 
-    # Enforce STT/LLM provider coupling
-    if "llm_provider" in req.settings:
-        llm = current["llm_provider"]
-        # Cloud providers use Groq STT, local providers use Speaches
-        if llm in ("groq", "openrouter"):
-            current["stt_provider"] = "groq"
-        else:  # ollama, openai_compatible
-            current["stt_provider"] = "speaches"
-
     # Save merged settings
     settings_module.save_settings(current)
 
@@ -886,13 +877,22 @@ class SetupStatusResponse(BaseModel):
 class SetupCompleteRequest(BaseModel):
     """Request body for /setup/complete endpoint."""
 
-    llm_provider: str  # "ollama" | "groq"
+    llm_provider: str  # "ollama" | "groq" | "openai_compatible" | "openrouter"
+    # STT provider (independent from LLM)
+    stt_provider: str | None = None  # "speaches" | "groq"
     # Ollama settings
     ollama_host: str | None = None
     ollama_model: str | None = None
     # Groq settings
     groq_api_key: str | None = None
     groq_model: str | None = None
+    # OpenAI-compatible settings
+    openai_base_url: str | None = None
+    openai_api_key: str | None = None
+    openai_model: str | None = None
+    # OpenRouter settings
+    openrouter_api_key: str | None = None
+    openrouter_model: str | None = None
     # TTS provider
     tts_provider: str = "kokoro"  # "kokoro" | "piper"
     tts_voice_kokoro: str | None = None
@@ -992,18 +992,27 @@ async def complete_setup(req: SetupCompleteRequest) -> SetupCompleteResponse:
     try:
         current = settings_module.load_settings()
 
-        # Provider settings - UI couples STT and LLM together
+        # Provider settings - STT is independent from LLM
         current["llm_provider"] = req.llm_provider
-        if req.llm_provider == "groq":
-            current["stt_provider"] = "groq"
-            if req.groq_model:
-                current["groq_model"] = req.groq_model
-        else:
-            current["stt_provider"] = "speaches"
-            if req.ollama_host:
-                current["ollama_host"] = req.ollama_host
-            if req.ollama_model:
-                current["ollama_model"] = req.ollama_model
+        current["stt_provider"] = req.stt_provider or "speaches"
+
+        # LLM provider-specific settings
+        if req.ollama_host:
+            current["ollama_host"] = req.ollama_host
+        if req.ollama_model:
+            current["ollama_model"] = req.ollama_model
+        if req.groq_model:
+            current["groq_model"] = req.groq_model
+        if req.openai_base_url:
+            current["openai_base_url"] = req.openai_base_url
+        if req.openai_api_key:
+            current["openai_api_key"] = req.openai_api_key
+        if req.openai_model:
+            current["openai_model"] = req.openai_model
+        if req.openrouter_api_key:
+            current["openrouter_api_key"] = req.openrouter_api_key
+        if req.openrouter_model:
+            current["openrouter_model"] = req.openrouter_model
 
         # Home Assistant integration - only update if explicitly provided
         if req.hass_enabled is not None:

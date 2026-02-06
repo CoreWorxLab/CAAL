@@ -471,8 +471,32 @@ export function ProviderStep({ data, updateData }: ProviderStepProps) {
               </select>
             </div>
           )}
+        </div>
+      )}
 
-          <p className="text-muted-foreground text-xs">{t('openrouterSttNote')}</p>
+      {/* Groq API key for STT when LLM is not Groq */}
+      {data.stt_provider === 'groq' && data.llm_provider !== 'groq' && (
+        <div className="space-y-1 border-t pt-3">
+          <label className="text-sm font-medium">{t('groqApiKey')} (STT)</label>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={data.groq_api_key}
+              onChange={(e) => updateData({ groq_api_key: e.target.value })}
+              placeholder="gsk_..."
+              className="border-input bg-background flex-1 rounded-md border px-3 py-2"
+            />
+            <button
+              onClick={testGroq}
+              disabled={!data.groq_api_key || testStatus === 'testing'}
+              className="bg-muted hover:bg-muted/80 flex items-center gap-2 rounded-md px-3 py-2 text-sm disabled:opacity-50"
+            >
+              <StatusIcon />
+              {tCommon('test')}
+            </button>
+          </div>
+          {testError && <p className="text-xs text-red-500">{testError}</p>}
+          <p className="text-muted-foreground text-xs">{t('groqSttNote')}</p>
         </div>
       )}
     </div>

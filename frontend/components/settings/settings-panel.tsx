@@ -29,7 +29,9 @@ interface Settings {
   prompt: string;
   // General
   theme: 'midnight' | 'greySlate' | 'light';
-  // Providers
+  // STT Provider
+  stt_provider: 'speaches' | 'groq';
+  // LLM Providers
   llm_provider: 'ollama' | 'groq' | 'openai_compatible' | 'openrouter';
   ollama_host: string;
   ollama_model: string;
@@ -42,6 +44,7 @@ interface Settings {
   // OpenRouter
   openrouter_api_key: string;
   openrouter_model: string;
+  // TTS
   tts_provider: 'kokoro' | 'piper';
   tts_voice_kokoro: string;
   tts_voice_piper: string;
@@ -72,7 +75,7 @@ interface Settings {
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-type TabId = 'agent' | 'prompt' | 'providers' | 'llm' | 'integrations';
+type TabId = 'agent' | 'prompt' | 'pipeline' | 'aiProvider' | 'integrations';
 
 // =============================================================================
 // Constants
@@ -82,6 +85,7 @@ const DEFAULT_SETTINGS: Settings = {
   agent_name: 'Cal',
   prompt: 'default',
   theme: 'midnight',
+  stt_provider: 'speaches',
   llm_provider: 'ollama',
   ollama_host: 'http://localhost:11434',
   ollama_model: '',
@@ -207,6 +211,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   // Restart prompt state
   const [originalProvider, setOriginalProvider] = useState<string | null>(null);
+  const [originalSttProvider, setOriginalSttProvider] = useState<string | null>(null);
+  const [originalTtsProvider, setOriginalTtsProvider] = useState<string | null>(null);
   const [showRestartPrompt, setShowRestartPrompt] = useState(false);
 
   const t = useTranslations('Settings');
@@ -215,8 +221,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const tabs: { id: TabId; label: string }[] = [
     { id: 'agent', label: t('tabs.agent') },
     { id: 'prompt', label: t('tabs.prompt') },
-    { id: 'providers', label: t('tabs.providers') },
-    { id: 'llm', label: t('tabs.llm') },
+    { id: 'pipeline', label: t('tabs.pipeline') },
+    { id: 'aiProvider', label: t('tabs.aiProvider') },
     { id: 'integrations', label: t('tabs.integrations') },
   ];
 
@@ -229,6 +235,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     setError(null);
     setShowRestartPrompt(false);
     setOriginalProvider(null);
+    setOriginalSttProvider(null);
+    setOriginalTtsProvider(null);
 
     try {
       // First load settings to get the correct tts_provider
@@ -310,12 +318,20 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     }
   }, [settings.theme, settingsLoadedFromApi]);
 
-  // Capture original provider when settings first load
+  // Capture original providers when settings first load
   useEffect(() => {
     if (settingsLoadedFromApi && originalProvider === null) {
       setOriginalProvider(settings.llm_provider);
+      setOriginalSttProvider(settings.stt_provider);
+      setOriginalTtsProvider(settings.tts_provider);
     }
-  }, [settingsLoadedFromApi, settings.llm_provider, originalProvider]);
+  }, [
+    settingsLoadedFromApi,
+    settings.llm_provider,
+    settings.stt_provider,
+    settings.tts_provider,
+    originalProvider,
+  ]);
 
   // ---------------------------------------------------------------------------
   // Test connections
@@ -565,8 +581,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         });
       }
 
-      // Check if provider changed and show restart prompt instead of closing
-      if (settings.llm_provider !== originalProvider && originalProvider !== null) {
+      // Check if any provider changed and show restart prompt instead of closing
+      const providerChanged =
+        (originalProvider !== null && settings.llm_provider !== originalProvider) ||
+        (originalSttProvider !== null && settings.stt_provider !== originalSttProvider) ||
+        (originalTtsProvider !== null && settings.tts_provider !== originalTtsProvider);
+      if (providerChanged) {
         setShowRestartPrompt(true);
       } else {
         onClose();
@@ -757,43 +777,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('agent.voice')}</label>
-        <select
-          value={
-            settings.tts_provider === 'piper' ? settings.tts_voice_piper : settings.tts_voice_kokoro
-          }
-          onChange={(e) => {
-            if (settings.tts_provider === 'piper') {
-              handlePiperVoiceChange(e.target.value);
-            } else {
-              setSettings({ ...settings, tts_voice_kokoro: e.target.value });
-            }
-          }}
-          className="select-field text-foreground w-full px-4 py-3 text-sm"
-        >
-          {voices.length > 0 ? (
-            voices.map((voice) => (
-              <option key={voice} value={voice}>
-                {voice}
-              </option>
-            ))
-          ) : (
-            <option
-              value={
-                settings.tts_provider === 'piper'
-                  ? settings.tts_voice_piper
-                  : settings.tts_voice_kokoro
-              }
-            >
-              {settings.tts_provider === 'piper'
-                ? settings.tts_voice_piper
-                : settings.tts_voice_kokoro}
-            </option>
-          )}
-        </select>
-      </div>
-
       {/* Wake Word Section */}
       <div className="border-t pt-6">
         <div className="mb-4 flex items-center justify-between">
@@ -970,13 +953,177 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     </div>
   );
 
-  const renderProvidersTab = () => (
+  const renderPipelineTab = () => (
     <div className="space-y-8">
-      {/* LLM Provider */}
+      {/* ── Section 1: STT ── */}
       <div className="space-y-3">
         <label className="text-muted-foreground block text-xs font-bold tracking-wide uppercase">
-          {t('providers.llmProvider')}
+          {t('pipeline.sttTitle')}
         </label>
+        <div
+          className="inline-flex rounded-xl p-1"
+          style={{ background: 'rgb(from var(--surface-2) r g b / 0.5)' }}
+        >
+          <button
+            onClick={() => setSettings({ ...settings, stt_provider: 'speaches' })}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              settings.stt_provider === 'speaches'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Speaches
+          </button>
+          <button
+            onClick={() => setSettings({ ...settings, stt_provider: 'groq' })}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              settings.stt_provider === 'groq'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Groq Whisper
+          </button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {settings.stt_provider === 'speaches'
+            ? t('pipeline.sttSpeachesDesc')
+            : t('pipeline.sttGroqDesc')}
+        </p>
+        {settings.stt_provider === 'groq' && settings.llm_provider === 'groq' && (
+          <p className="text-xs text-blue-400">{t('pipeline.sttGroqKeyShared')}</p>
+        )}
+        {settings.stt_provider === 'groq' &&
+          settings.llm_provider !== 'groq' &&
+          !settings.groq_api_key && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+              <p className="text-xs text-yellow-200">{t('pipeline.sttGroqKeyNote')}</p>
+            </div>
+          )}
+        {/* Groq API key field for STT when LLM is not Groq */}
+        {settings.stt_provider === 'groq' && settings.llm_provider !== 'groq' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">{t('providers.apiKey')} (Groq)</label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={settings.groq_api_key}
+                onChange={(e) => setSettings({ ...settings, groq_api_key: e.target.value })}
+                placeholder="gsk_..."
+                className="input-field text-foreground flex-1 px-4 py-3 text-sm"
+              />
+              <button
+                onClick={testGroq}
+                disabled={!settings.groq_api_key || groqTest.status === 'testing'}
+                className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ background: 'rgb(from var(--surface-2) r g b / 0.5)' }}
+              >
+                <TestStatusIcon status={groqTest.status} />
+                {tCommon('test')}
+              </button>
+            </div>
+            {groqTest.error && <p className="text-xs text-red-500">{groqTest.error}</p>}
+            {groqTest.status === 'success' && (
+              <p className="text-xs text-green-500">{tCommon('connected')}</p>
+            )}
+            <p className="text-muted-foreground text-xs">
+              {t('providers.getApiKeyAt')}{' '}
+              <a
+                href="https://console.groq.com/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                console.groq.com
+              </a>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── TTS ── */}
+      <div className="space-y-3 border-t pt-8">
+        <label className="text-muted-foreground block text-xs font-bold tracking-wide uppercase">
+          {t('pipeline.ttsTitle')}
+        </label>
+        <div
+          className="inline-flex rounded-xl p-1"
+          style={{ background: 'rgb(from var(--surface-2) r g b / 0.5)' }}
+        >
+          <button
+            onClick={() => handleTtsProviderChange('kokoro')}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              settings.tts_provider === 'kokoro'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Kokoro
+          </button>
+          <button
+            onClick={() => handleTtsProviderChange('piper')}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              settings.tts_provider === 'piper'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Piper
+          </button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {settings.tts_provider === 'kokoro'
+            ? t('providers.kokoroDesc')
+            : t('providers.piperDesc')}
+        </p>
+
+        {/* Voice selector (moved from Agent tab) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('agent.voice')}</label>
+          <select
+            value={
+              settings.tts_provider === 'piper'
+                ? settings.tts_voice_piper
+                : settings.tts_voice_kokoro
+            }
+            onChange={(e) => {
+              if (settings.tts_provider === 'piper') {
+                handlePiperVoiceChange(e.target.value);
+              } else {
+                setSettings({ ...settings, tts_voice_kokoro: e.target.value });
+              }
+            }}
+            className="select-field text-foreground w-full px-4 py-3 text-sm"
+          >
+            {voices.length > 0 ? (
+              voices.map((voice) => (
+                <option key={voice} value={voice}>
+                  {voice}
+                </option>
+              ))
+            ) : (
+              <option
+                value={
+                  settings.tts_provider === 'piper'
+                    ? settings.tts_voice_piper
+                    : settings.tts_voice_kokoro
+                }
+              >
+                {settings.tts_provider === 'piper'
+                  ? settings.tts_voice_piper
+                  : settings.tts_voice_kokoro}
+              </option>
+            )}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAiProviderTab = () => (
+    <div className="space-y-6">
+      {/* Provider selector */}
+      <div className="space-y-3">
         <div
           className="flex flex-wrap gap-2 rounded-xl p-1"
           style={{ background: 'rgb(from var(--surface-2) r g b / 0.5)' }}
@@ -1061,7 +1208,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               )}
             </div>
 
-            {/* Show model dropdown if we have models from test OR if model is already configured */}
             {(ollamaModels.length > 0 || settings.ollama_model) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('providers.model')}</label>
@@ -1135,7 +1281,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               </p>
             </div>
 
-            {/* Show model dropdown if we have models from test OR if model is already configured */}
             {(groqModels.length > 0 || settings.groq_model) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('providers.model')}</label>
@@ -1210,7 +1355,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <p className="text-muted-foreground text-xs">{t('providers.openaiApiKeyNote')}</p>
             </div>
 
-            {/* Model dropdown - shown after successful test */}
             {(openaiModels.length > 0 || settings.openai_model) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('providers.model')}</label>
@@ -1239,10 +1383,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 )}
               </div>
             )}
-
-            <p className="text-muted-foreground text-xs">
-              {t('providers.openaiCompatibleSttNote')}
-            </p>
           </div>
         )}
 
@@ -1353,126 +1493,76 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 )}
               </div>
             )}
+          </div>
+        )}
+      </div>
 
-            <p className="text-muted-foreground text-xs">{t('providers.openrouterSttNote')}</p>
+      {/* LLM Parameters */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">{t('llm.temperature')}</label>
+            <span className="text-muted-foreground text-sm">{settings.temperature}</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="2"
+            step="0.05"
+            value={settings.temperature}
+            onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
+            className="bg-muted accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg"
+          />
+          <div className="text-muted-foreground flex justify-between text-xs">
+            <span>{t('llm.precise')}</span>
+            <span>{t('llm.creative')}</span>
+          </div>
+        </div>
+
+        {settings.llm_provider === 'ollama' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">{t('llm.contextSize')}</label>
+            <input
+              type="number"
+              min="1024"
+              max="131072"
+              step="1024"
+              value={settings.num_ctx}
+              onChange={(e) =>
+                setSettings({ ...settings, num_ctx: parseInt(e.target.value) || 8192 })
+              }
+              className="input-field text-foreground w-full px-4 py-3 text-sm"
+            />
           </div>
         )}
 
-        {/* STT Info */}
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-          <p className="text-sm text-blue-200">
-            <span className="font-semibold">{t('providers.sttProvider')}:</span>{' '}
-            {settings.llm_provider === 'ollama' || settings.llm_provider === 'openai_compatible'
-              ? t('providers.speachesLocal')
-              : t('providers.groqWhisper')}
-            <br />
-            <span className="text-xs opacity-70">{t('providers.sttProviderNote')}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* TTS Provider */}
-      <div className="space-y-3">
-        <label className="text-muted-foreground block text-xs font-bold tracking-wide uppercase">
-          {t('providers.ttsProvider')}
-        </label>
-        <div
-          className="inline-flex rounded-xl p-1"
-          style={{ background: 'rgb(from var(--surface-2) r g b / 0.5)' }}
-        >
-          <button
-            onClick={() => handleTtsProviderChange('kokoro')}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              settings.tts_provider === 'kokoro'
-                ? 'bg-background text-foreground shadow'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Kokoro
-          </button>
-          <button
-            onClick={() => handleTtsProviderChange('piper')}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              settings.tts_provider === 'piper'
-                ? 'bg-background text-foreground shadow'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Piper
-          </button>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          {settings.tts_provider === 'kokoro'
-            ? t('providers.kokoroDesc')
-            : t('providers.piperDesc')}
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderLLMTab = () => (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">{t('llm.temperature')}</label>
-          <span className="text-muted-foreground text-sm">{settings.temperature}</span>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="2"
-          step="0.05"
-          value={settings.temperature}
-          onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-          className="bg-muted accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg"
-        />
-        <div className="text-muted-foreground flex justify-between text-xs">
-          <span>{t('llm.precise')}</span>
-          <span>{t('llm.creative')}</span>
-        </div>
-      </div>
-
-      {settings.llm_provider === 'ollama' && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">{t('llm.contextSize')}</label>
+          <label className="text-sm font-medium">{t('llm.maxTurns')}</label>
           <input
             type="number"
-            min="1024"
-            max="131072"
-            step="1024"
-            value={settings.num_ctx}
+            min="1"
+            max="100"
+            value={settings.max_turns}
             onChange={(e) =>
-              setSettings({ ...settings, num_ctx: parseInt(e.target.value) || 8192 })
+              setSettings({ ...settings, max_turns: parseInt(e.target.value) || 20 })
             }
             className="input-field text-foreground w-full px-4 py-3 text-sm"
           />
         </div>
-      )}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('llm.maxTurns')}</label>
-        <input
-          type="number"
-          min="1"
-          max="100"
-          value={settings.max_turns}
-          onChange={(e) => setSettings({ ...settings, max_turns: parseInt(e.target.value) || 20 })}
-          className="input-field text-foreground w-full px-4 py-3 text-sm"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('llm.toolCacheSize')}</label>
-        <input
-          type="number"
-          min="0"
-          max="10"
-          value={settings.tool_cache_size}
-          onChange={(e) =>
-            setSettings({ ...settings, tool_cache_size: parseInt(e.target.value) || 3 })
-          }
-          className="input-field text-foreground w-full px-4 py-3 text-sm"
-        />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('llm.toolCacheSize')}</label>
+          <input
+            type="number"
+            min="0"
+            max="10"
+            value={settings.tool_cache_size}
+            onChange={(e) =>
+              setSettings({ ...settings, tool_cache_size: parseInt(e.target.value) || 3 })
+            }
+            className="input-field text-foreground w-full px-4 py-3 text-sm"
+          />
+        </div>
       </div>
     </div>
   );
@@ -1757,8 +1847,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
                 {activeTab === 'agent' && renderAgentTab()}
                 {activeTab === 'prompt' && renderPromptTab()}
-                {activeTab === 'providers' && renderProvidersTab()}
-                {activeTab === 'llm' && renderLLMTab()}
+                {activeTab === 'pipeline' && renderPipelineTab()}
+                {activeTab === 'aiProvider' && renderAiProviderTab()}
                 {activeTab === 'integrations' && renderIntegrationsTab()}
               </>
             )}

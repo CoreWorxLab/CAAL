@@ -24,10 +24,19 @@
     "tabs": {
       "agent": "Agent",
       "prompt": "Prompt",
-      "providers": "Providers",
-      "llm": "LLM Settings",
+      "pipeline": "Voice Pipeline",
+      "aiProvider": "AI Provider",
       "integrations": "Integrations",
       "wake": "Wake Word"
+    },
+    "pipeline": {
+      "sttTitle": "Speech Recognition (STT)",
+      "llmTitle": "Language Model (LLM)",
+      "ttsTitle": "Text-to-Speech (TTS)",
+      "sttSpeachesDesc": "Local via Whisper. Private, on your hardware.",
+      "sttGroqDesc": "Cloud via Groq Whisper. Fast and accurate.",
+      "sttGroqKeyNote": "Requires a Groq API key (shared with LLM if using Groq).",
+      "sttGroqKeyShared": "API key shared with the LLM section below."
     },
     "language": {
       "label": "Language",
@@ -262,9 +271,10 @@
   "Setup": {
     "welcome": "Welcome to CAAL",
     "stepOf": "Step {current} of {total}",
-    "step1Title": "Choose your AI provider",
-    "step2Title": "Choose your voice",
-    "step3Title": "Configure integrations",
+    "step1Title": "How will I hear you?",
+    "step2Title": "Choose your AI provider",
+    "step3Title": "Choose your voice",
+    "step4Title": "Configure integrations",
     "finishSetup": "Finish Setup"
   },
   "ControlBar": {

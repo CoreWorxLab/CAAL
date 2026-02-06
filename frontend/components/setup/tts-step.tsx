@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { SetupData } from './setup-wizard';
 
-interface SttStepProps {
+interface TtsStepProps {
   data: SetupData;
   updateData: (updates: Partial<SetupData>) => void;
 }
 
-export function SttStep({ data, updateData }: SttStepProps) {
+export function TtsStep({ data, updateData }: TtsStepProps) {
   const t = useTranslations('Settings.tts');
   const tAgent = useTranslations('Settings.agent');
 
