@@ -208,6 +208,22 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   // OpenRouter searchable dropdown state
   const [openrouterDropdownOpen, setOpenrouterDropdownOpen] = useState(false);
   const [openrouterSearch, setOpenrouterSearch] = useState('');
+  const openrouterDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openrouterDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        openrouterDropdownRef.current &&
+        !openrouterDropdownRef.current.contains(e.target as Node)
+      ) {
+        setOpenrouterDropdownOpen(false);
+        setOpenrouterSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openrouterDropdownOpen]);
 
   // Restart prompt state
   const [originalProvider, setOriginalProvider] = useState<string | null>(null);
@@ -1434,7 +1450,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             {(openrouterModels.length > 0 || settings.openrouter_model) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('providers.model')}</label>
-                <div className="relative">
+                <div ref={openrouterDropdownRef} className="relative">
                   <button
                     onClick={() => setOpenrouterDropdownOpen(!openrouterDropdownOpen)}
                     className="input-field text-foreground flex w-full items-center justify-between px-4 py-3 text-left text-sm"
