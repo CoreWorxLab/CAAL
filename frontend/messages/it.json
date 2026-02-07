@@ -36,7 +36,7 @@
       "sttSpeachesDesc": "Locale tramite Whisper. Privato, sul tuo hardware.",
       "sttGroqDesc": "Cloud tramite Groq Whisper. Veloce e preciso.",
       "sttGroqKeyNote": "Richiede una chiave API Groq (condivisa con LLM se si usa Groq).",
-      "sttGroqKeyShared": "Chiave API condivisa con la sezione LLM qui sotto."
+      "sttGroqKeyShared": "Chiave API condivisa con la sezione LLM di Groq."
     },
     "language": {
       "label": "Lingua",
