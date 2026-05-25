@@ -108,7 +108,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ['${SPEACHES_GPU_ID:-0}']
               capabilities: [gpu]
     restart: unless-stopped
     networks:
@@ -137,7 +137,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ['${KOKORO_GPU_ID:-0}']
               capabilities: [gpu]
     restart: unless-stopped
     networks:
