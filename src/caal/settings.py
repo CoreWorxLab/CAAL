@@ -111,6 +111,9 @@ DEFAULT_SETTINGS = {
     # OpenRouter settings (cloud API)
     "openrouter_api_key": "",     # OpenRouter API key (required for openrouter provider)
     "openrouter_model": "",       # Model name (empty = use default)
+    # Requesty settings (cloud API)
+    "requesty_api_key": "",       # Requesty API key (required for requesty provider)
+    "requesty_model": "",         # Model name (empty = use default)
 }
 
 # Per-language Piper TTS voice mapping
