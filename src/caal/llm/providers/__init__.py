@@ -9,6 +9,7 @@ Providers:
     - GroqProvider: Groq cloud API
     - OpenAICompatibleProvider: Any OpenAI-compatible server
     - OpenRouterProvider: OpenRouter cloud API (400+ models)
+    - RequestyProvider: Requesty cloud API (OpenAI-compatible gateway)
 
 Example:
     >>> from caal.llm.providers import create_provider
@@ -26,6 +27,10 @@ Example:
     >>> # Create OpenRouter provider
     >>> provider = create_provider("openrouter", model="openai/gpt-4",
     ...                            api_key="sk-...")
+    >>>
+    >>> # Create Requesty provider
+    >>> provider = create_provider("requesty", model="openai/gpt-4o-mini",
+    ...                            api_key="sk-...")
 """
 
 from __future__ import annotations
@@ -39,6 +44,7 @@ from .groq_provider import GroqProvider
 from .ollama_provider import OllamaProvider
 from .openai_compatible_provider import OpenAICompatibleProvider
 from .openrouter_provider import OpenRouterProvider
+from .requesty_provider import RequestyProvider
 
 __all__ = [
     "LLMProvider",
@@ -48,6 +54,7 @@ __all__ = [
     "GroqProvider",
     "OpenAICompatibleProvider",
     "OpenRouterProvider",
+    "RequestyProvider",
     "create_provider",
 ]
 
@@ -62,7 +69,7 @@ def create_provider(
 
     Args:
         provider_name: Provider identifier ("ollama", "groq", "openai_compatible",
-            or "openrouter")
+            "openrouter", or "requesty")
         **kwargs: Provider-specific configuration options
 
     Returns:
@@ -94,10 +101,12 @@ def create_provider(
         return OpenAICompatibleProvider(**kwargs)
     elif provider_name == "openrouter":
         return OpenRouterProvider(**kwargs)
+    elif provider_name == "requesty":
+        return RequestyProvider(**kwargs)
     else:
         raise ValueError(
             f"Unknown LLM provider: {provider_name}. "
-            f"Supported providers: ollama, groq, openai_compatible, openrouter"
+            f"Supported providers: ollama, groq, openai_compatible, openrouter, requesty"
         )
 
 
@@ -109,7 +118,8 @@ def create_provider_from_settings(settings: dict[str, Any]) -> LLMProvider:
 
     Args:
         settings: Runtime settings dict with keys like:
-            - llm_provider: "ollama", "groq", "openai_compatible", or "openrouter"
+            - llm_provider: "ollama", "groq", "openai_compatible", "openrouter",
+              or "requesty"
             - ollama_model: Ollama model name
             - groq_model: Groq model name
             - openai_model: OpenAI-compatible model name
@@ -117,6 +127,8 @@ def create_provider_from_settings(settings: dict[str, Any]) -> LLMProvider:
             - openai_api_key: OpenAI-compatible API key (optional)
             - openrouter_model: OpenRouter model name
             - openrouter_api_key: OpenRouter API key (required)
+            - requesty_model: Requesty model name
+            - requesty_api_key: Requesty API key (required)
             - temperature: Sampling temperature
             - num_ctx: Context window size (Ollama only)
 
@@ -168,8 +180,21 @@ def create_provider_from_settings(settings: dict[str, Any]) -> LLMProvider:
             api_key=api_key,
             temperature=settings.get("temperature", 0.7),
         )
+    elif provider_name == "requesty":
+        # API key from settings, fallback to environment variable
+        api_key = settings.get("requesty_api_key") or os.environ.get("REQUESTY_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "Requesty API key required. Set requesty_api_key in settings "
+                "or REQUESTY_API_KEY environment variable."
+            )
+        return RequestyProvider(
+            model=settings.get("requesty_model", "openai/gpt-4o-mini"),
+            api_key=api_key,
+            temperature=settings.get("temperature", 0.7),
+        )
     else:
         raise ValueError(
             f"Unknown LLM provider: {provider_name}. "
-            f"Supported providers: ollama, groq, openai_compatible, openrouter"
+            f"Supported providers: ollama, groq, openai_compatible, openrouter, requesty"
         )

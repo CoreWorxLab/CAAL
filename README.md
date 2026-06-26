@@ -23,7 +23,7 @@ ollama pull coreworxlab/caal-qwen3.5-9b
 
 **Infinitely extensible.** Any [n8n](https://n8n.io/) workflow becomes a voice-activated tool. Control [Home Assistant](https://www.home-assistant.io/) devices, query APIs, automate your life — then share your tools with the community via the [CAAL Tool Registry](https://github.com/CoreWorxLab/caal-tools). Tools follow a suite convention — fewer tools, better accuracy, more reliable routing.
 
-**Local by default.** Runs fully on your network with [Ollama](https://ollama.ai/). No accounts, no telemetry, no cloud dependency. Want to use [Groq](https://groq.com/), [OpenRouter](https://openrouter.ai/), or any OpenAI-compatible API? Your choice. Your credentials and tool executions never leave your network regardless.
+**Local by default.** Runs fully on your network with [Ollama](https://ollama.ai/). No accounts, no telemetry, no cloud dependency. Want to use [Groq](https://groq.com/), [OpenRouter](https://openrouter.ai/), [Requesty](https://requesty.ai/), or any OpenAI-compatible API? Your choice. Your credentials and tool executions never leave your network regardless.
 
 ---
 
@@ -33,7 +33,7 @@ ollama pull coreworxlab/caal-qwen3.5-9b
 - **Tool Chaining** — Sequential multi-tool calls in one prompt. The model uses real data from each step to inform the next
 - **Home Assistant** — Voice control across lights, covers, locks, climate, media, and more via `hass`
 - **n8n Workflows** — Any workflow becomes a tool. Visual, inspectable, shareable, auditable through n8n's execution history
-- **Flexible Providers** — Ollama, Groq, OpenRouter, or any OpenAI-compatible API. Speaches or Groq for STT. Kokoro or Piper for TTS
+- **Flexible Providers** — Ollama, Groq, OpenRouter, Requesty, or any OpenAI-compatible API. Speaches or Groq for STT. Kokoro or Piper for TTS
 - **Short-Term Memory** — Store and recall information across sessions
 - **Internationalization** — English, French, Italian, with more coming
 - **Wake Word** — "Hey Cal" via OpenWakeWord
@@ -165,6 +165,7 @@ CAAL is built in the open. If you build a tool, we see the PR. If you find a bug
 - [Ollama](https://ollama.ai/) - Local LLM server
 - [Groq](https://groq.com/) - Fast cloud LLM inference
 - [OpenRouter](https://openrouter.ai/) - Unified API for 200+ models
+- [Requesty](https://requesty.ai/) - OpenAI-compatible LLM gateway
 - [n8n](https://n8n.io/) - Workflow automation
 - [Home Assistant](https://www.home-assistant.io/) - Smart home platform
 

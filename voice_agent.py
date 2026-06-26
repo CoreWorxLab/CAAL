@@ -176,6 +176,15 @@ def get_runtime_settings() -> dict:
             user_settings.get("openrouter_model")
             or os.getenv("OPENROUTER_MODEL", "openai/gpt-4")
         ),
+        # Requesty settings
+        "requesty_api_key": (
+            settings.get("requesty_api_key")
+            or os.getenv("REQUESTY_API_KEY", "")
+        ),
+        "requesty_model": (
+            user_settings.get("requesty_model")
+            or os.getenv("REQUESTY_MODEL", "openai/gpt-4o-mini")
+        ),
         # Shared settings
         "max_turns": settings.get("max_turns", int(os.getenv("OLLAMA_MAX_TURNS", "20"))),
         "tool_cache_size": settings.get("tool_cache_size", int(os.getenv("TOOL_CACHE_SIZE", "3"))),
@@ -383,6 +392,10 @@ async def entrypoint(ctx: agents.JobContext) -> None:
     elif llm_provider == "openrouter":
         logger.info(
             f"  LLM: OpenRouter ({runtime.get('openrouter_model', '?')})"
+        )
+    elif llm_provider == "requesty":
+        logger.info(
+            f"  LLM: Requesty ({runtime.get('requesty_model', '?')})"
         )
     logger.info(f"  MCP: {list(mcp_servers.keys()) or 'None'}")
     logger.info(

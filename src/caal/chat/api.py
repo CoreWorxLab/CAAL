@@ -179,6 +179,15 @@ def _get_runtime_settings() -> dict:
             user_settings.get("openrouter_model")
             or os.getenv("OPENROUTER_MODEL", "openai/gpt-4")
         ),
+        # Requesty
+        "requesty_api_key": (
+            settings.get("requesty_api_key")
+            or os.getenv("REQUESTY_API_KEY", "")
+        ),
+        "requesty_model": (
+            user_settings.get("requesty_model")
+            or os.getenv("REQUESTY_MODEL", "openai/gpt-4o-mini")
+        ),
         # Shared
         "max_turns": settings.get(
             "max_turns", int(os.getenv("OLLAMA_MAX_TURNS", "20"))
@@ -536,6 +545,7 @@ async def reload_chat() -> ReloadResponse:
             or runtime.get("groq_model")
             or runtime.get("openai_model")
             or runtime.get("openrouter_model")
+            or runtime.get("requesty_model")
             or ""
         ),
         tools_loaded=tools_loaded,
